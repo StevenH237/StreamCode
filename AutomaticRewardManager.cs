@@ -9,12 +9,14 @@ public class CPHInline
   private const string ScriptFile = @"C:\Users\Nixill\Documents\Streaming\Scripts\rewards.txt";
   private static Regex SplitString = new Regex(@"^\s+([^\s]+)\s+(.*)$", RegexOptions.Compiled);
 
-  private (string, string) Split(string input)
+  private static Dictionary<string, (bool Conditional, Predicate<string, List<string>, ScriptStatus> Callback)> Keywords;
+
+  private (string, string) Keyword(string input)
   {
     Match mtc = SplitString.Match(input);
 
-    if (mtc.Success) return (mtc.Groups[1].Value, mtc.Groups[2].Value);
-    else return (input.Trim(), null);
+    if (mtc.Success) return (mtc.Groups[1].Value.ToLower(), mtc.Groups[2].Value);
+    else return (input.Trim().ToLower(), null);
   }
 
   // ARGUMENTS IN
@@ -52,12 +54,15 @@ public class CPHInline
 
   public void ParseLine(string line, List<string> lines, ref ScriptStatus status)
   {
-    // 
-  }
+    // Get the first keyword of the line
+    (string keyword, line) = Keyword(line);
 
-  public bool ParseCondition(string line, List<string> lines, ref ScriptStatus status)
-  {
-
+    // See if it's an acceptable keyword
+    // If not we'll ignore the line without affecting script status
+    if (!Keywords.ContainsKey(keyword))
+    {
+      return;
+    }
   }
 }
 
