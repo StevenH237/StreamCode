@@ -11,6 +11,11 @@ public class CPHInline
 
   private static Dictionary<string, (bool Conditional, Predicate<string, List<string>, ScriptStatus> Callback)> Keywords;
 
+  private void Init()
+  {
+
+  }
+
   private (string, string) Keyword(string input)
   {
     Match mtc = SplitString.Match(input);
@@ -28,7 +33,7 @@ public class CPHInline
     ScriptStatus status = ScriptStatus.True;
 
     // Iterate over all the lines of the script. But we're using a list
-    // because some keywords can also delete lines early.
+    // and lines.Count because some keywords can also delete lines early.
     while (lines.Count > 0)
     {
       string line = lines[0];
@@ -63,6 +68,8 @@ public class CPHInline
     {
       return;
     }
+
+    // If it is, then we'll 
   }
 }
 
