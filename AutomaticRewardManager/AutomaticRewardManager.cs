@@ -12,11 +12,14 @@ public class CPHInline
   private static Dictionary<string, (bool Conditional, KeywordCallback Callback)> Keywords = new();
 
   private const bool DEBUG = false;
+  private const bool LogErrors = true;
+
+  private int TotalLines = 0;
 
   public void Init()
   {
     // Keywords["both"] = (true, BothKeyword);
-    // Keywords["either"] = (true, EitherKeyword);
+    Keywords["either"] = (true, EitherKeyword);
     Keywords["else"] = (false, ElseKeyword);
     Keywords["fail"] = (true, FailKeyword);
     Keywords["log"] = (false, LogKeyword);
@@ -40,7 +43,8 @@ public class CPHInline
   {
     CPH.LogInfo("Running rewards management script");
 
-    List<string> lines = File.ReadAllLines(ScriptFile).ToList();
+    List<string> lines = File.ReadAllLines(ScriptFile).Select(x => x.Trim()).ToList();
+    TotalLines = lines.Count;
     ScriptStatus status = ScriptStatus.True;
 
     // Iterate over all the lines of the script. But we're using a list
@@ -120,6 +124,39 @@ public class CPHInline
   // =======================
   // == KEYWORD CALLBACKS ==
   // =======================
+  private void EitherKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // Error if this line is otherwise blank.
+    if (line == null)
+    {
+      status = ScriptStatus.Error;
+    }
+
+    // Parse the rest of the first line...
+    ScriptStatus stat1 = ScriptStatus.True;
+    ParseLine(true, line, otherLines, ref stat1);
+
+    if (stat1 == ScriptStatus.Error)
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // ... and now the next line.
+    string line2 = otherLines[0];
+    if (line2 == "")
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+    otherLines.RemoveAt(0);
+    ScriptStatus stat2 = ScriptStatus.True;
+    ParseLine(true, line2, otherLines, ref stat2);
+
+    if (stat2 == ScriptStatus.Error) status = ScriptStatus.Error;
+    if (stat1 == ScriptStatus.False && stat2 == ScriptStatus.False) status = ScriptStatus.False;
+  }
+
   private void ElseKeyword(string line, List<string> otherLines, ref ScriptStatus status)
   {
     if (line == null)
