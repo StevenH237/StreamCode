@@ -1,0 +1,12 @@
+log Alright, let's do some new tests! 1
+
+not fail
+log Don't fail this message! 2
+not pass
+log Do fail this message! 3
+else log Don't fail this message! 4
+not log Fail this message! 5
+log Fail this message! 6
+else log Fail this message! 7
+
+log Pass this message! 8

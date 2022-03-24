@@ -1,0 +1,19 @@
+log Hi!
+log I'm your script!
+
+log You should be seeing all of these messages.
+else But you shouldn't see this one.
+fail
+log Or this one.
+else log But you *should* see this one!
+log And again, not this one.
+
+else
+log Nope
+else
+log Yep!
+else fail
+log This should now fail because of an error state.
+else log So should this.
+
+log And you should see this one too!

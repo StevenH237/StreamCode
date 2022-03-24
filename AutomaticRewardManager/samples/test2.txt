@@ -1,0 +1,15 @@
+log Hi!
+log I'm your script!
+
+log You should be seeing all of these messages.
+fail
+log But not this one.
+else log But you *should* see this one!
+log And again, not this one.
+
+else
+log Nope
+else
+log Yep!
+
+log And you should see this one too!
