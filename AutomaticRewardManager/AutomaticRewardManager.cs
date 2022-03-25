@@ -18,7 +18,7 @@ public class CPHInline
 
   public void Init()
   {
-    // Keywords["both"] = (true, BothKeyword);
+    Keywords["both"] = (true, BothKeyword);
     Keywords["either"] = (true, EitherKeyword);
     Keywords["else"] = (false, ElseKeyword);
     Keywords["fail"] = (true, FailKeyword);
@@ -124,6 +124,39 @@ public class CPHInline
   // =======================
   // == KEYWORD CALLBACKS ==
   // =======================
+  private void BothKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // Error if this line is otherwise blank.
+    if (line == null)
+    {
+      status = ScriptStatus.Error;
+    }
+
+    // Parse the rest of the first line...
+    ScriptStatus stat1 = ScriptStatus.True;
+    ParseLine(true, line, otherLines, ref stat1);
+
+    if (stat1 == ScriptStatus.Error)
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // ... and now the next line.
+    string line2 = otherLines[0];
+    if (line2 == "")
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+    otherLines.RemoveAt(0);
+    ScriptStatus stat2 = ScriptStatus.True;
+    ParseLine(true, line2, otherLines, ref stat2);
+
+    if (stat2 == ScriptStatus.Error) status = ScriptStatus.Error;
+    if (stat1 == ScriptStatus.False || stat2 == ScriptStatus.False) status = ScriptStatus.False;
+  }
+
   private void EitherKeyword(string line, List<string> otherLines, ref ScriptStatus status)
   {
     // Error if this line is otherwise blank.
