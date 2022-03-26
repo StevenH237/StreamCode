@@ -11,6 +11,7 @@ public class CPHInline
   private static Regex SplitString = new Regex(@"^([^\s]+?) +(.*)$", RegexOptions.Compiled);
 
   private static Dictionary<string, (bool Conditional, KeywordCallback Callback)> Keywords = new();
+  private static Dictionary<string, bool> IgnoredKeywords = new();
 
   private int TotalLines = 0;
 
@@ -28,6 +29,7 @@ public class CPHInline
     Keywords["game-is"] = (true, GameIsKeyword);
     Keywords["game-start"] = (true, GameStartKeyword);
     Keywords["game"] = (true, GameKeyword);
+    Keywords["goto"] = (true, GotoKeyword);
     Keywords["log"] = (false, LogKeyword);
     Keywords["not"] = (true, NotKeyword);
     Keywords["pass"] = (true, PassKeyword);
@@ -35,14 +37,21 @@ public class CPHInline
     Keywords["prices"] = (false, PricesKeyword);
     Keywords["say"] = (false, SayKeyword);
     Keywords["set"] = (false, SetKeyword);
-    // Keywords["skip"] = (false, SkipKeyword);
     Keywords["title"] = (true, TitleKeyword);
-    Keywords["update"] = (true, UpdateKeyword);
+    Keywords["update"] = (false, UpdateKeyword);
+
+    IgnoredKeywords["and"] = false;
+    IgnoredKeywords["or"] = false;
+    IgnoredKeywords["//"] = true;
+    IgnoredKeywords["label"] = true;
+    IgnoredKeywords["#"] = true;
+    IgnoredKeywords["--"] = true;
   }
 
   // =====================
   // == UTILITY METHODS ==
   // =====================
+  #region UTILITY METHODS
   private (string, string) Keyword(string input, bool lowercase = true)
   {
     Match mtc = SplitString.Match(input);
@@ -81,6 +90,12 @@ public class CPHInline
     if (objectType == "message") return new StreamTimedMessage(objectID);
     return null;
   }
+  #endregion
+
+  // ===============
+  // == CALLABLES ==
+  // ===============
+  #region CALLABLES
 
   // ARGUMENTS IN
   //   %status% - New stream title
@@ -91,7 +106,6 @@ public class CPHInline
 
     List<(string Text, int Number)> lines = File.ReadAllLines(ScriptFile)
       .Select((x, i) => (Text: x.Trim(), Number: i + 1))
-      .Where(x => !x.Text.StartsWith("//"))
       .ToList();
     TotalLines = lines.Count;
     ScriptStatus status = ScriptStatus.True;
@@ -121,10 +135,17 @@ public class CPHInline
       ParseLine(null, scriptLine, lines, ref status);
     }
 
+    CPH.ExecuteMethod("Timed Message Dispatch", "UpdateFile");
+
     // why do these have to be bools anyway
     return true;
   }
+  #endregion
 
+  // ====================
+  // == ACTION METHODS ==
+  // ====================
+  #region ACTION METHODS
   public void ParseLine(bool? conditional, (string Text, int Number) scriptLine, List<(string Text, int Number)> lines, ref ScriptStatus status)
   {
     string line = scriptLine.Text;
@@ -132,6 +153,39 @@ public class CPHInline
     // Get the first keyword of the line
     string keyword;
     (keyword, line) = Keyword(line);
+
+    // Make sure it's not an ignored keyword
+    while (IgnoredKeywords.ContainsKey(keyword))
+    {
+      if (IgnoredKeywords[keyword]) // whether or not to skip the whole line
+      {
+        if (lines.Count == 0)
+        {
+          CPH.LogWarn($"ERROR: On line {scriptLine.Number}, unexpected end of script.");
+          status = ScriptStatus.Error;
+          return;
+        }
+        scriptLine = lines[0];
+        if (scriptLine.Text == "")
+        {
+          CPH.LogWarn($"ERROR: On line {scriptLine.Number}, unexpected end of block.");
+          status = ScriptStatus.Error;
+          return;
+        }
+        lines.RemoveAt(0);
+        (keyword, line) = Keyword(scriptLine.Text);
+      }
+      else
+      {
+        if (line == null)
+        {
+          CPH.LogWarn($"ERROR: On line {scriptLine.Number}, incomplete line.");
+          status = ScriptStatus.Error;
+          return;
+        }
+        (keyword, line) = Keyword(line);
+      }
+    }
 
     // Make sure it exists as a keyword
     if (!Keywords.ContainsKey(keyword))
@@ -164,10 +218,12 @@ public class CPHInline
     // *Now* parse it.
     callback((line, scriptLine.Number), lines, ref status);
   }
+  #endregion
 
   // =======================
   // == KEYWORD CALLBACKS ==
   // =======================
+  #region KEYWORD CALLBACKS
   private void BothKeyword((string Text, int Number) scriptLine, List<(string Text, int Number)> otherLines, ref ScriptStatus status)
   {
     string line = scriptLine.Text;
@@ -435,6 +491,50 @@ public class CPHInline
     }
   }
 
+  private void GotoKeyword((string Text, int Number) scriptLine, List<(string Text, int Number)> otherLines, ref ScriptStatus status)
+  {
+    // Skip if conditions are unmet.
+    if (status == ScriptStatus.False) return;
+
+    // Get the text first
+    string line = scriptLine.Text;
+
+    if (line == null)
+    {
+      CPH.LogWarn($"WARNING: On line {scriptLine.Number}, an unspecific goto is used. Gotos should always be specific.");
+    }
+    else
+    {
+      line = line.ToLower();
+    }
+
+    while (otherLines.Count > 0)
+    {
+      // Take the top line off the script
+      (string Text, int Number) scriptLine2 = otherLines[0];
+      otherLines.RemoveAt(0);
+      string line2 = scriptLine2.Text;
+
+      // If it's blank, try again
+      if (line2 == "") continue;
+      string keyword;
+      (keyword, line2) = Keyword(line2);
+
+      // If it's not a label, try again
+      if (keyword != "label") continue;
+
+      // If it's a label, is it the right one (or any, for an unspecific goto)?
+      // If so, stop skipping. We're done.
+      if (line == null || line == line2) return;
+
+      // Otherwise, try again.
+    }
+
+    // If we depleted the whole script, throw an error and return.
+    CPH.LogWarn($"WARNING: On line {scriptLine.Number}, a goto was provided without a matching label. (goto can only move down the script, not up.)");
+    status = ScriptStatus.Error; // not that I think this does anything but just in case
+  }
+
   private void LogKeyword((string Text, int Number) scriptLine, List<(string Text, int Number)> otherLines, ref ScriptStatus status)
   {
     if (status == ScriptStatus.True) CPH.LogInfo(scriptLine.Text);
@@ -636,8 +736,13 @@ public class CPHInline
     // And now set the message
     priceObj.Update(CPH, line);
   }
+  #endregion
 }
 
+// ===================
+// == OTHER CLASSES ==
+// ===================
+#region OTHER CLASSES
 public enum ScriptStatus
 {
   False = 0,
@@ -706,20 +811,21 @@ internal class StreamTimedMessage : StreamObject, IToggleable, ITextable
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageEnabled", false);
-    CPH.RunAction("Timed Messages Toggle");
+    CPH.ExecuteMethod("Timed Message Dispatch", "ToggleMessage");
   }
 
   void IToggleable.Enable(Plugins.InlineInvokeProxy CPH)
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageEnabled", true);
-    CPH.RunAction("Timed Messages Toggle");
+    CPH.ExecuteMethod("Timed Message Dispatch", "ToggleMessage");
   }
 
   void ITextable.Update(Plugins.InlineInvokeProxy CPH, string text)
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageText", text);
-    CPH.RunAction("Timed Messages Update");
+    CPH.ExecuteMethod("Timed Message Dispatch", "EditMessage");
   }
 }
+#endregion

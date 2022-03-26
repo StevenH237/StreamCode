@@ -10,7 +10,7 @@ public class CPHInline
   public void Dispose() => UpdateFile();
 
   private bool Saving = false;
-  private const string MessageFile = @"C:\Users\Nixill\Documents\Streaming\messages.txt";
+  private const string MessageFile = @"C:\Users\Nixill\Documents\Streaming\Scripts\messages.txt";
 
   private List<(string ID, bool Enabled, string Message)> Messages;
   private static Regex MessageFormat = new Regex(@"^\[([+-])([A-Za-z0-9-_]{1,32})\] (.+)$",
