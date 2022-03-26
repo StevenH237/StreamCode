@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 
 public class CPHInline
 {
@@ -16,24 +17,72 @@ public class CPHInline
 
   private int TotalLines = 0;
 
+  private CompareInfo StringComparer = CultureInfo.InvariantCulture.CompareInfo;
+  private CompareOptions ComparisonOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
+
   public void Init()
   {
     Keywords["both"] = (true, BothKeyword);
+    Keywords["disable"] = (false, DisableKeyword);
     Keywords["either"] = (true, EitherKeyword);
     Keywords["else"] = (false, ElseKeyword);
+    Keywords["enable"] = (false, EnableKeyword);
     Keywords["fail"] = (true, FailKeyword);
+    Keywords["game-is"] = (true, GameIsKeyword);
+    Keywords["game-start"] = (true, GameStartKeyword);
+    Keywords["game"] = (true, GameKeyword);
     Keywords["log"] = (false, LogKeyword);
     Keywords["not"] = (true, NotKeyword);
     Keywords["pass"] = (true, PassKeyword);
+    // Keywords["price"] = (false, PriceKeyword);
+    // Keywords["prices"] = (false, PricesKeyword);
     Keywords["say"] = (false, SayKeyword);
+    Keywords["set"] = (false, SetKeyword);
+    // Keywords["skip"] = (false, SkipKeyword);
+    Keywords["title"] = (true, TitleKeyword);
+    // Keywords["update"] = (true, UpdateKeyword);
   }
 
-  private (string, string) Keyword(string input)
+  // =====================
+  // == UTILITY METHODS ==
+  // =====================
+  private (string, string) Keyword(string input, bool lowercase = true)
   {
     Match mtc = SplitString.Match(input);
 
-    if (mtc.Success) return (mtc.Groups[1].Value.ToLower(), mtc.Groups[2].Value);
-    else return (input.Trim().ToLower(), null);
+    string keyword;
+    string restOfLine = null;
+
+    if (mtc.Success)
+    {
+      keyword = mtc.Groups[1].Value;
+      restOfLine = mtc.Groups[2].Value;
+    }
+    else keyword = input.Trim();
+
+    if (lowercase) keyword = keyword.ToLower();
+
+    return (keyword, restOfLine);
+  }
+
+  // Whether or not value starts with, matches, or contains input
+  private bool StartsWithInsensitive(string input, string value) => StringComparer.IsPrefix(value, input, ComparisonOptions);
+  private bool MatchesInsensitive(string input, string value) => StartsWithInsensitive(value, input) && StartsWithInsensitive(input, value);
+  private bool ContainsInsensitive(string input, string value) => StringComparer.IndexOf(value, input, ComparisonOptions) != -1;
+
+  private StreamObject GetScriptObject(ref string line)
+  {
+    string objectType, objectID;
+    (objectType, line) = Keyword(line);
+    if (line == null) return null;
+
+    (objectID, line) = Keyword(line);
+
+    if (objectType == "reward") return new StreamReward(objectID);
+    if (objectType == "timer") return new StreamTimer(objectID);
+    if (objectType == "command") return new StreamCommand(objectID);
+    if (objectType == "message") return new StreamTimedMessage(objectID);
+    return null;
   }
 
   // ARGUMENTS IN
@@ -157,6 +206,24 @@ public class CPHInline
     if (stat1 == ScriptStatus.False || stat2 == ScriptStatus.False) status = ScriptStatus.False;
   }
 
+  private void DisableKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // If the conditions weren't met, we're not even interested in trying.
+    if (status == ScriptStatus.False) return;
+
+    // Get the toggleable object.
+    var obj = GetScriptObject(ref line);
+    var toggle = (obj as IToggleable);
+
+    if (toggle == null)
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    toggle.Disable(CPH);
+  }
+
   private void EitherKeyword(string line, List<string> otherLines, ref ScriptStatus status)
   {
     // Error if this line is otherwise blank.
@@ -212,9 +279,93 @@ public class CPHInline
     }
   }
 
+  private void EnableKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // If the conditions weren't met, we're not even interested in trying.
+    if (status == ScriptStatus.False) return;
+
+    // Get the toggleable object.
+    var obj = GetScriptObject(ref line);
+    var toggle = (obj as IToggleable);
+
+    if (toggle == null)
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    toggle.Enable(CPH);
+  }
+
   private void FailKeyword(string line, List<string> otherLines, ref ScriptStatus status)
   {
     status = ScriptStatus.False;
+  }
+
+  private void GameIsKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // First off, it's an error if there's no input to check, or no game
+    // name to check against.
+    if (line == null || !args.ContainsKey("gameName"))
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // For the "game-is" keyword, we have to get the game title...
+    string game = (string)args["gameName"];
+
+    // And now compare it to the input:
+    bool match = MatchesInsensitive(line, game);
+
+    if (!match)
+    {
+      status = ScriptStatus.False;
+    }
+  }
+
+  private void GameKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // First off, it's an error if there's no input to check, or no game
+    // name to check against.
+    if (line == null || !args.ContainsKey("gameName"))
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // For the "game" keyword, we have to get the game title...
+    string game = (string)args["gameName"];
+
+    // And now compare it to the input:
+    bool match = ContainsInsensitive(line, game);
+
+    if (!match)
+    {
+      status = ScriptStatus.False;
+    }
+  }
+
+  private void GameStartKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // First off, it's an error if there's no input to check, or no game
+    // name to check against.
+    if (line == null || !args.ContainsKey("gameName"))
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // For the "game" keyword, we have to get the game title...
+    string game = (string)args["gameName"];
+
+    // And now compare it to the input:
+    bool match = StartsWithInsensitive(line, game);
+
+    if (!match)
+    {
+      status = ScriptStatus.False;
+    }
   }
 
   private void LogKeyword(string line, List<string> otherLines, ref ScriptStatus status)
@@ -244,6 +395,44 @@ public class CPHInline
   {
     if (status == ScriptStatus.True) CPH.SendMessage(line);
   }
+
+  private void SetKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // Get the toggleable object.
+    var obj = GetScriptObject(ref line);
+    var toggle = (obj as IToggleable);
+
+    if (toggle == null)
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    if (status == ScriptStatus.True) toggle.Enable(CPH);
+    else toggle.Disable(CPH);
+  }
+
+  private void TitleKeyword(string line, List<string> otherLines, ref ScriptStatus status)
+  {
+    // First off, it's an error if there's no input to check, or no game
+    // name to check against.
+    if (line == null || !args.ContainsKey("status"))
+    {
+      status = ScriptStatus.Error;
+      return;
+    }
+
+    // For the "game" keyword, we have to get the game title...
+    string title = (string)args["status"];
+
+    // And now compare it to the input:
+    bool match = ContainsInsensitive(line, title);
+
+    if (!match)
+    {
+      status = ScriptStatus.False;
+    }
+  }
 }
 
 public enum ScriptStatus
@@ -254,3 +443,80 @@ public enum ScriptStatus
 }
 
 internal delegate void KeywordCallback(string line, List<string> otherLines, ref ScriptStatus status);
+
+internal abstract class StreamObject
+{
+  protected string ID;
+  protected StreamObject(string id)
+  {
+    ID = id;
+  }
+}
+
+internal interface IToggleable
+{
+  internal void Disable(Plugins.InlineInvokeProxy CPH);
+  internal void Enable(Plugins.InlineInvokeProxy CPH);
+}
+
+internal interface ITextable
+{
+  internal void Update(Plugins.InlineInvokeProxy CPH, string text);
+}
+
+internal interface IPriceable
+{
+  internal void SetPrice(Plugins.InlineInvokeProxy CPH, int price);
+}
+
+internal class StreamCommand : StreamObject, IToggleable
+{
+  internal StreamCommand(string id) : base(id) { }
+
+  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableCommand(ID);
+  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableCommand(ID);
+}
+
+internal class StreamTimer : StreamObject, IToggleable
+{
+  internal StreamTimer(string id) : base(id) { }
+
+  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableTimer(ID);
+  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableTimer(ID);
+}
+
+internal class StreamReward : StreamObject, IToggleable, ITextable, IPriceable
+{
+  internal StreamReward(string id) : base(id) { }
+
+  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableReward(ID);
+  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableReward(ID);
+  void ITextable.Update(Plugins.InlineInvokeProxy CPH, string text) => CPH.UpdateRewardPrompt(ID, text);
+  void IPriceable.SetPrice(Plugins.InlineInvokeProxy CPH, int price) => CPH.UpdateRewardCost(ID, price);
+}
+
+internal class StreamTimedMessage : StreamObject, IToggleable, ITextable
+{
+  internal StreamTimedMessage(string id) : base(id) { }
+
+  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH)
+  {
+    CPH.SetArgument("messageID", ID);
+    CPH.SetArgument("messageEnabled", false);
+    CPH.RunAction("Timed Messages Toggle");
+  }
+
+  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH)
+  {
+    CPH.SetArgument("messageID", ID);
+    CPH.SetArgument("messageEnabled", true);
+    CPH.RunAction("Timed Messages Toggle");
+  }
+
+  void ITextable.Update(Plugins.InlineInvokeProxy CPH, string text)
+  {
+    CPH.SetArgument("messageID", ID);
+    CPH.SetArgument("messageText", text);
+    CPH.RunAction("Timed Messages Update");
+  }
+}
