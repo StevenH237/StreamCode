@@ -35,6 +35,12 @@ public class CPHInline
     JObject player = (JObject)obj["player"];
     bool playing = (bool)player["playing"];
 
+    // Log strings because apparently things aren't working 🙃
+    CPH.LogInfo(title);
+    CPH.LogInfo(artist);
+    CPH.LogInfo(album);
+    CPH.LogInfo(playing.ToString());
+
     // Set individual texts
     SetPango("txt_PretzelTitle", (string)title);
     SetPango("txt_PretzelArtist", (string)artist);
