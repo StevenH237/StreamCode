@@ -1,3 +1,4 @@
+// CopyNowPlaying.cs
 using System;
 using System.Threading;
 using System.Windows;

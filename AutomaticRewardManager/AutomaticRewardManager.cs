@@ -1,9 +1,12 @@
+// AutomaticRewardManager.cs
 using System;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Globalization;
+
+using Streamer.bot.Plugin.Interface;
 
 public class CPHInline
 {
@@ -1071,65 +1074,65 @@ internal abstract class StreamObject
 
 internal interface IToggleable
 {
-  internal void Disable(Plugins.InlineInvokeProxy CPH);
-  internal void Enable(Plugins.InlineInvokeProxy CPH);
+  internal void Disable(IInlineInvokeProxy CPH);
+  internal void Enable(IInlineInvokeProxy CPH);
 }
 
 internal interface ITextable
 {
-  internal void Update(Plugins.InlineInvokeProxy CPH, string text);
+  internal void Update(IInlineInvokeProxy CPH, string text);
 }
 
 internal interface IPriceable
 {
-  internal void SetPrice(Plugins.InlineInvokeProxy CPH, int price);
+  internal void SetPrice(IInlineInvokeProxy CPH, int price);
 }
 
 internal class StreamCommand : StreamObject, IToggleable
 {
   internal StreamCommand(string id) : base(id) { }
 
-  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableCommand(ID);
-  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableCommand(ID);
+  void IToggleable.Disable(IInlineInvokeProxy CPH) => CPH.DisableCommand(ID);
+  void IToggleable.Enable(IInlineInvokeProxy CPH) => CPH.EnableCommand(ID);
 }
 
 internal class StreamTimer : StreamObject, IToggleable
 {
   internal StreamTimer(string id) : base(id) { }
 
-  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableTimer(ID);
-  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableTimer(ID);
+  void IToggleable.Disable(IInlineInvokeProxy CPH) => CPH.DisableTimer(ID);
+  void IToggleable.Enable(IInlineInvokeProxy CPH) => CPH.EnableTimer(ID);
 }
 
 internal class StreamReward : StreamObject, IToggleable, ITextable, IPriceable
 {
   internal StreamReward(string id) : base(id) { }
 
-  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH) => CPH.DisableReward(ID);
-  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH) => CPH.EnableReward(ID);
-  void ITextable.Update(Plugins.InlineInvokeProxy CPH, string text) => CPH.UpdateRewardPrompt(ID, text);
-  void IPriceable.SetPrice(Plugins.InlineInvokeProxy CPH, int price) => CPH.UpdateRewardCost(ID, price);
+  void IToggleable.Disable(IInlineInvokeProxy CPH) => CPH.DisableReward(ID);
+  void IToggleable.Enable(IInlineInvokeProxy CPH) => CPH.EnableReward(ID);
+  void ITextable.Update(IInlineInvokeProxy CPH, string text) => CPH.UpdateRewardPrompt(ID, text);
+  void IPriceable.SetPrice(IInlineInvokeProxy CPH, int price) => CPH.UpdateRewardCost(ID, price);
 }
 
 internal class StreamTimedMessage : StreamObject, IToggleable, ITextable
 {
   internal StreamTimedMessage(string id) : base(id) { }
 
-  void IToggleable.Disable(Plugins.InlineInvokeProxy CPH)
+  void IToggleable.Disable(IInlineInvokeProxy CPH)
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageEnabled", false);
     CPH.ExecuteMethod("Timed Message Dispatch", "ToggleMessage");
   }
 
-  void IToggleable.Enable(Plugins.InlineInvokeProxy CPH)
+  void IToggleable.Enable(IInlineInvokeProxy CPH)
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageEnabled", true);
     CPH.ExecuteMethod("Timed Message Dispatch", "ToggleMessage");
   }
 
-  void ITextable.Update(Plugins.InlineInvokeProxy CPH, string text)
+  void ITextable.Update(IInlineInvokeProxy CPH, string text)
   {
     CPH.SetArgument("messageID", ID);
     CPH.SetArgument("messageText", text);

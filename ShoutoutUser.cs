@@ -1,3 +1,4 @@
+// ShoutoutUser.cs
 using System;
 
 public class CPHInline
@@ -10,7 +11,7 @@ public class CPHInline
     if (args.ContainsKey("input0")) CPH.SetArgument("targetUser", args["input0"]);
 
     // Otherwise just put in who last raided us.
-    else CPH.SetArgument("targetUser", "NixillShadowFox");
+    else CPH.SetArgument("targetUser", LastRaider);
 
     // your main code goes here
     return true;

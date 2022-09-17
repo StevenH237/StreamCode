@@ -1,3 +1,4 @@
+// SceneItemVisibilityDispatch.cs
 using System;
 
 public class CPHInline

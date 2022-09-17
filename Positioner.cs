@@ -1,3 +1,4 @@
+// Positioner.cs
 // This exists because somehow my things keep getting thrown out of place.
 // I don't know how to stop it, but I can at least reset it! :D
 
@@ -18,7 +19,13 @@ public class CPHInline
     ["sc_No raid"] = (960, -5),
     ["sc_Technical difficulties"] = (960, -5),
     ["sc_Camera"] = (1690, 1085),
-    ["sc_16:9 Gaming"] = (1690, 1085)
+    ["sc_16:9 Gaming"] = (1690, 1085),
+    ["sc_GBA Gaming"] = (1690, 1085)
+  };
+
+  private string[] MovedObjects = new string[] {
+    "grp_AlertPopup",
+    "grp_SmallAlertPopup"
   };
 
   public bool Execute()

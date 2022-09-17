@@ -1,9 +1,18 @@
-// Code to set redemption/timer status
+//
 using System;
-using System.IO;
 
 public class CPHInline
 {
+  // public void Init()
+  // {
+  //
+  // }
+
+  // public void Dispose()
+  // {
+  //
+  // }
+
   public bool Execute()
   {
     // your main code goes here

@@ -1,3 +1,4 @@
+// SubAlert.cs
 // Code for big sub alert
 
 using System;
@@ -9,14 +10,9 @@ public class CPHInline
 
   public void SetPango(string sourceName, string sourceText)
   {
-    JObject obj = new();
-    obj["sourceName"] = new JValue(sourceName);
-    obj["sourceType"] = new JValue("text_pango_source");
-    JObject stgs = new();
-    obj["sourceSettings"] = stgs;
-    stgs["text"] = new JValue(sourceText);
-
-    CPH.ObsSendRaw("SetSourceSettings", obj.ToString());
+    CPH.SetArgument("pangoTextName", sourceName);
+    CPH.SetArgument("pangoTextValue", sourceText);
+    CPH.RunAction("OBS Set Pango Text");
   }
 
   public bool Execute()

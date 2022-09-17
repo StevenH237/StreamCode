@@ -1,3 +1,4 @@
+// SlideshowController.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -45,17 +46,18 @@ public class CPHInline
         );
   }
 
-	public bool Execute()
-	{
+  public bool Execute()
+  {
     Func<bool> next = Actions[0];
     Actions.RemoveAt(0);
     Actions.Add(next);
 
-		// your main code goes here
-		return next();
-	}
+    // your main code goes here
+    return next();
+  }
 
-  public bool SetImage1() {
+  public bool SetImage1()
+  {
     // Get the next image
     string next = Queue[0];
     Queue.RemoveAt(0);
@@ -72,7 +74,8 @@ public class CPHInline
     return true;
   }
 
-  public bool HideImage2() {
+  public bool HideImage2()
+  {
     // Set 2 invisible
     CPH.ObsHideSource(Scene, "img_Slideshow2");
 
@@ -87,7 +90,8 @@ public class CPHInline
     return true;
   }
 
-  public bool SetImage2() {
+  public bool SetImage2()
+  {
     // Get the next image
     string next = Queue[0];
     Queue.RemoveAt(0);
@@ -103,7 +107,8 @@ public class CPHInline
     return true;
   }
 
-  public bool HideImage1() {
+  public bool HideImage1()
+  {
     // Set 2 invisible
     CPH.ObsHideSource(Scene, "img_Slideshow1B");
 
