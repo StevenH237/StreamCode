@@ -16,6 +16,9 @@ public class CPHInline
 
   public bool Execute()
   {
+    // WHYYYYYYYYY
+    CPH.LogInfo("Pretzel splitter go!");
+
     // This variable is used for the folder
     string folder = @"C:\Users\Nixill\Documents\Streaming\Pretzel\";
 

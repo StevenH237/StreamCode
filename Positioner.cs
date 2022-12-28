@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 public class CPHInline
@@ -12,12 +13,12 @@ public class CPHInline
   {
     ["sc_Starting"] = (960, -5),
     ["sc_BRB"] = (960, -5),
-    ["sc_Break (No ad)"] = (960, -5),
-    ["sc_Break (Ad)"] = (960, -5),
+    ["sc_Break"] = (960, -5),
     ["sc_Loading raid"] = (960, -5),
     ["sc_Raid target"] = (960, -5),
     ["sc_No raid"] = (960, -5),
     ["sc_Technical difficulties"] = (960, -5),
+    ["st_Title Screens"] = (960, -5),
     ["sc_Camera"] = (1690, 1085),
     ["sc_16:9 Gaming"] = (1690, 1085),
     ["sc_GBA Gaming"] = (1690, 1085)
@@ -36,22 +37,27 @@ public class CPHInline
     {
       (int X, int Y) pos = Positions[scene];
 
+      var listResponse = ((IEnumerable<JToken>)(JObject
+        .Parse(CPH.ObsSendRaw("GetSceneItemList", new JObject() { ["sceneName"] = new JValue(scene) }.ToString()))["sceneItems"]))
+        .Select(x => ((JObject)x))
+        .Where(x => MovedObjects.Contains((string)x["sourceName"]))
+        .Select(x => (int)x["sceneItemId"]);
+
       JObject obj = new()
       {
-        ["item"] = new JValue("grp_AlertPopup"),
-        ["scene-name"] = new JValue(scene),
-        ["position"] = new JObject()
+        ["sceneName"] = new JValue(scene),
+        ["sceneItemTransform"] = new JObject()
         {
-          ["x"] = new JValue(pos.X),
-          ["y"] = new JValue(pos.Y)
+          ["positionX"] = new JValue(pos.X),
+          ["positionY"] = new JValue(pos.Y)
         }
       };
 
-      CPH.ObsSendRaw("SetSceneItemProperties", obj.ToString());
-
-      obj["item"] = new JValue("grp_SmallAlertPopup");
-
-      CPH.ObsSendRaw("SetSceneItemProperties", obj.ToString());
+      foreach (int id in listResponse)
+      {
+        obj["sceneItemId"] = id;
+        CPH.ObsSendRaw("SetSceneItemTransform", obj.ToString());
+      }
     }
 
     return true;
