@@ -4,6 +4,9 @@ using Newtonsoft.Json.Linq;
 
 public class CPHInline
 {
+  // DON'T USE THIS IN OTHER METHODS!
+  // Have it call this method through the "OBS Set Pango Text" action
+  // so that only this one needs to be updated when necessary.
   public void SetPango(string inputName, string inputText)
   {
     JObject obj = new();
