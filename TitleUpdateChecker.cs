@@ -33,6 +33,7 @@ public class CPHInline
     obj["game"] = new JValue(args["gameName"]);
     obj["last-changed"] = new JValue(DateTime.Now);
     SaveStreamInfo(obj);
+    CheckStreamUpdate();
     return true;
   }
 
@@ -55,16 +56,26 @@ public class CPHInline
         // Stop the attempt to stream
         CPH.ObsStopStreaming();
         CPH.DiscordPostTextToWebhook((string)obj["webhook"], "<@106621544809115648> You didn't update stream info!");
+        CPH.SendMessage("Stream stopping because Nix forgot to update stream info!");
         obj["no-update-warning"] = now;
         SaveStreamInfo(obj);
         return false;
       }
     }
 
-    // Check if the game mismatch warning has been given recently.
-    // Since that's the last warning, we can just immediately proceed if true.
-    var lastGameWarn = obj["game-mismatch-warning"].ToObject<DateTime>();
-    if (now - lastGameWarn <= SixHours) return true;
+    return true;
+  }
+
+  // On stream update:
+  public bool CheckStreamUpdate()
+  {
+    var obj = GetStreamInfo();
+
+    // // Check if the game mismatch warning has been given recently.
+    // // Since that's the last warning, we can just immediately proceed if true.
+    // // This is now commented out because I want to just always give this warning.
+    // var lastGameWarn = obj["game-mismatch-warning"].ToObject<DateTime>();
+    // if (now - lastGameWarn <= SixHours) return true;
 
     // Check if the game title matches the stream title.
     string streamTitle = (string)obj["title"];
@@ -76,24 +87,35 @@ public class CPHInline
       JObject aliases = (JObject)obj["aliases"];
       if (!aliases.ContainsKey(gameTitle))
       {
-        CPH.ObsStopStreaming();
         CPH.DiscordPostTextToWebhook((string)obj["webhook"], "<@106621544809115648> Game and stream title don't match!");
-        obj["game-mismatch-warning"] = now;
-        SaveStreamInfo(obj);
+        if (CPH.ObsIsStreaming()) CPH.SendMessage("Nix, your game and stream title don't match!");
+        // // This is now commented out because I want to just always give this warning.
+        // obj["game-mismatch-warning"] = now;
+        // SaveStreamInfo(obj);
         return false;
       }
 
       JArray currentAliases = (JArray)aliases[gameTitle];
       if (!currentAliases.Where(x => streamTitle.Contains((string)x)).Any())
       {
-        CPH.ObsStopStreaming();
         CPH.DiscordPostTextToWebhook((string)obj["webhook"], "<@106621544809115648> Game and stream title don't match!");
-        obj["game-mismatch-warning"] = now;
-        SaveStreamInfo(obj);
+        if (CPH.ObsIsStreaming()) CPH.SendMessage("Nix, your game and stream title don't match!");
+        // // This is now commented out because I want to just always give this warning.
+        // obj["game-mismatch-warning"] = now;
+        // SaveStreamInfo(obj);
         return false;
       }
     }
 
+    return true;
+  }
+
+  // Get stream title:
+  public bool SetArgsStreamInfo()
+  {
+    var obj = GetStreamInfo();
+    CPH.SetArgument("status", (string)obj["title"]);
+    CPH.SetArgument("gameName", (string)obj["game"]);
     return true;
   }
 }
